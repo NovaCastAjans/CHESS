@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>♟️ Satranç</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>♟️ Satranç</h1>
+            <div id="turn-indicator">Beyaz oynar</div>
+            <button id="reset-btn">🔄 Yeni Oyun</button>
+        </header>
+
+        <div id="controls">
+            <div>
+                <label>Renk:</label>
+                <button class="color-btn" data-color="W">Beyaz</button>
+                <button class="color-btn" data-color="B">Siyah</button>
+            </div>
+            <div>
+                <label>Zorluk:</label>
+                <button class="depth-btn" data-depth="1">Kolay</button>
+                <button class="depth-btn" data-depth="2">Orta</button>
+                <button class="depth-btn" data-depth="3">Zor</button>
+            </div>
+            <button id="undo-btn">↩ Geri Al</button>
+            <button id="save-btn">💾 Kaydet</button>
+            <button id="load-btn">📂 Yükle</button>
+        </div>
+
+        <div id="board-container">
+            <div id="board"></div>
+            <div id="move-history-container">
+                <h3>Hamle Geçmişi</h3>
+                <ul id="move-history"></ul>
+            </div>
+        </div>
+
+        <div id="promotion-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Piyonu terfi ettir</h3>
+                <div id="promotion-choices">
+                    <button data-piece="queen">♛ Vezir</button>
+                    <button data-piece="rook">♜ Kale</button>
+                    <button data-piece="bishop">♝ Fil</button>
+                    <button data-piece="knight">♞ At</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="game-over-message"></h2>
+                <button id="new-game-btn">🔄 Yeni Oyun</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
