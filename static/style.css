@@ -12,6 +12,7 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
+    transition: background 0.3s;
 }
 
 #app {
@@ -22,6 +23,7 @@ body {
     text-align: center;
     max-width: 1200px;
     width: 100%;
+    transition: background 0.3s;
 }
 
 header {
@@ -47,7 +49,7 @@ h1 {
     font-weight: 600;
 }
 
-#reset-btn, #undo-btn, #save-btn, #load-btn {
+#reset-btn, #undo-btn, #save-btn, #load-btn, #reset-stats-btn {
     border: none;
     color: white;
     padding: 8px 20px;
@@ -85,12 +87,21 @@ h1 {
     background: #9f8a6a;
     transform: scale(1.03);
 }
+#reset-stats-btn {
+    background: #7f5a5a;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+}
+#reset-stats-btn:hover {
+    background: #9f6a6a;
+    transform: scale(1.03);
+}
 
 #controls {
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin: 15px 0 20px;
+    margin: 10px 0 10px;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -118,6 +129,63 @@ h1 {
     box-shadow: 0 0 8px #f0d9b5;
 }
 
+#theme-controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 0 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+#theme-controls label {
+    color: #f0e9e1;
+    font-weight: bold;
+    margin-right: 8px;
+}
+.theme-btn {
+    background: #5a524a;
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: 0.2s;
+}
+.theme-btn:hover {
+    background: #7f6b5b;
+    transform: scale(1.05);
+}
+.theme-btn.active {
+    background: #b58863;
+    box-shadow: 0 0 8px #f0d9b5;
+}
+
+#stats-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin: 10px 0 15px;
+    flex-wrap: wrap;
+    background: #2d2a26;
+    padding: 8px 20px;
+    border-radius: 30px;
+}
+#stats {
+    display: flex;
+    gap: 20px;
+    color: #f0e9e1;
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+#stats span {
+    display: inline-block;
+}
+#stats span span {
+    color: #f0d9b5;
+}
+
 #board-container {
     display: flex;
     justify-content: center;
@@ -136,6 +204,7 @@ h1 {
     background: #b58863;
     flex-shrink: 0;
     position: relative;
+    transition: border-color 0.3s, background 0.3s;
 }
 
 .cell {
@@ -147,11 +216,10 @@ h1 {
     font-size: 2.8rem;
     cursor: pointer;
     user-select: none;
-    transition: background 0.15s;
+    transition: background 0.15s, color 0.3s;
     position: relative;
 }
 
-/* Sade animasyon – sadece hafif ölçek değişimi */
 .cell .piece {
     display: inline-block;
     transition: transform 0.15s ease;
@@ -164,12 +232,38 @@ h1 {
     100% { transform: scale(1); opacity: 1; }
 }
 
-.cell.light {
-    background: #f0d9b5;
-}
-.cell.dark {
-    background: #b58863;
-}
+/* ----- TEMA: KLASİK (varsayılan) ----- */
+body.theme-classic #app { background: #3b3834; }
+body.theme-classic .cell.light { background: #f0d9b5; }
+body.theme-classic .cell.dark { background: #b58863; }
+body.theme-classic #board { border-color: #5a4d3e; }
+
+/* ----- TEMA: MAVİ ----- */
+body.theme-blue #app { background: #1a2a3a; }
+body.theme-blue .cell.light { background: #c8d8e8; }
+body.theme-blue .cell.dark { background: #6a8aaa; }
+body.theme-blue #board { border-color: #2a4a6a; }
+body.theme-blue .cell .piece { color: #1a2a3a; }
+body.theme-blue .cell.light .piece { color: #1a2a3a; }
+body.theme-blue .cell.dark .piece { color: #f0f0f0; }
+
+/* ----- TEMA: YEŞİL ----- */
+body.theme-green #app { background: #1a2a1a; }
+body.theme-green .cell.light { background: #c8dcc8; }
+body.theme-green .cell.dark { background: #5a8a5a; }
+body.theme-green #board { border-color: #2a5a2a; }
+body.theme-green .cell .piece { color: #1a2a1a; }
+body.theme-green .cell.light .piece { color: #1a2a1a; }
+body.theme-green .cell.dark .piece { color: #f0f0f0; }
+
+/* ----- TEMA: KOYU ----- */
+body.theme-dark #app { background: #1a1a1a; }
+body.theme-dark .cell.light { background: #4a4a4a; }
+body.theme-dark .cell.dark { background: #2a2a2a; }
+body.theme-dark #board { border-color: #3a3a3a; }
+body.theme-dark .cell .piece { color: #f0f0f0; }
+body.theme-dark #turn-indicator { background: #3a3a3a; }
+body.theme-dark #stats { color: #ccc; }
 
 .cell.highlight {
     background: #7fc97f !important;
@@ -335,5 +429,14 @@ h1 {
     #controls {
         flex-direction: column;
         gap: 10px;
+    }
+    #theme-controls {
+        flex-direction: column;
+        gap: 6px;
+    }
+    #stats-container {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
     }
 }

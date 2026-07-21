@@ -1,5 +1,5 @@
 // ============================================================
-//  SATRANÇ OYUNU – RASTGELE AI (MİNİMAX GEÇİCİ DEVRE DIŞI)
+//  SATRANÇ OYUNU – MİNİMAX AI (DÜZELTİLDİ, RASTGELE YEDEK)
 // ============================================================
 
 class ChessGame {
@@ -23,7 +23,6 @@ class ChessGame {
         this.stateHistory = [];
         this.dragSource = null;
 
-        // Ses dosyaları (bulunamazsa hata verir, ama oyun devam eder)
         this.moveSound = new Audio('/static/sounds/move.wav');
         this.captureSound = new Audio('/static/sounds/capture.wav');
 
@@ -34,12 +33,21 @@ class ChessGame {
         this.gameOverModal = document.getElementById('game-over-modal');
         this.gameOverMessage = document.getElementById('game-over-message');
 
+        // İstatistikler
+        this.winsEl = document.getElementById('wins');
+        this.lossesEl = document.getElementById('losses');
+        this.drawsEl = document.getElementById('draws');
+        this.stats = this.loadStats();
+
+        // Butonlar
         document.getElementById('reset-btn').addEventListener('click', () => this.reset());
         document.getElementById('new-game-btn').addEventListener('click', () => this.reset());
         document.getElementById('undo-btn').addEventListener('click', () => this.undoMove());
         document.getElementById('save-btn').addEventListener('click', () => this.saveGame());
         document.getElementById('load-btn').addEventListener('click', () => this.loadGame());
+        document.getElementById('reset-stats-btn').addEventListener('click', () => this.resetStats());
 
+        // Renk ve zorluk
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -61,6 +69,21 @@ class ChessGame {
         document.querySelector('.color-btn[data-color="W"]')?.classList.add('active');
         document.querySelector('.depth-btn[data-depth="2"]')?.classList.add('active');
 
+        // Tema
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const theme = btn.dataset.theme;
+                document.body.className = `theme-${theme}`;
+                localStorage.setItem('chessTheme', theme);
+            });
+        });
+        const savedTheme = localStorage.getItem('chessTheme') || 'classic';
+        document.body.className = `theme-${savedTheme}`;
+        document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`)?.classList.add('active');
+
+        // Terfi
         document.querySelectorAll('#promotion-choices button').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const piece = e.target.dataset.piece;
@@ -68,12 +91,42 @@ class ChessGame {
             });
         });
 
+        // Sürükleme
         this.boardEl.addEventListener('dragstart', (e) => this.onDragStart(e));
         this.boardEl.addEventListener('dragover', (e) => this.onDragOver(e));
         this.boardEl.addEventListener('drop', (e) => this.onDrop(e));
         this.boardEl.addEventListener('dragend', (e) => this.onDragEnd(e));
 
         this.reset();
+        this.updateStatsDisplay();
+    }
+
+    // ---------- İSTATİSTİKLER ----------
+    loadStats() {
+        try {
+            const raw = localStorage.getItem('chessStats');
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return { wins: 0, losses: 0, draws: 0 };
+    }
+
+    saveStats() {
+        localStorage.setItem('chessStats', JSON.stringify(this.stats));
+    }
+
+    updateStatsDisplay() {
+        this.winsEl.textContent = this.stats.wins;
+        this.lossesEl.textContent = this.stats.losses;
+        this.drawsEl.textContent = this.stats.draws;
+    }
+
+    resetStats() {
+        if (confirm('İstatistikler sıfırlansın mı?')) {
+            this.stats = { wins: 0, losses: 0, draws: 0 };
+            this.saveStats();
+            this.updateStatsDisplay();
+            this.showTemporaryMessage('İstatistikler sıfırlandı!');
+        }
     }
 
     // ---------- STATE KAYDETME ----------
@@ -220,9 +273,7 @@ class ChessGame {
         this.updateTurnDisplay();
         this.renderMoveHistory();
 
-        console.log(`[AI] Oyun sıfırlandı. AI rengi: ${this.aiColor}, ilk sıra: ${this.turn}`);
         if (this.aiColor === 'W' && this.turn === 'W') {
-            console.log('[AI] AI beyaz ve ilk hamle onun, hemen hamle yapılacak.');
             this.scheduleAIMove();
         }
     }
@@ -241,7 +292,7 @@ class ChessGame {
         }
     }
 
-    // ---------- RENDER (SADE ANİMASYON) ----------
+    // ---------- RENDER ----------
     render(animateTo = null) {
         this.boardEl.innerHTML = '';
         for (let r = 0; r < 8; r++) {
@@ -339,7 +390,7 @@ class ChessGame {
         }
     }
 
-    // ---------- HAMLE ÜRETME (TEMEL) ----------
+    // ---------- HAMLE ÜRETME ----------
     getRawMoves(row, col, checkKingSafety = true) {
         const piece = this.getPiece(row, col);
         if (!piece) return [];
@@ -700,13 +751,11 @@ class ChessGame {
         this.selected = null;
         this.dragSource = null;
 
-        console.log(`[executeMove] Sıra değişti: ${this.turn}, AI rengi: ${this.aiColor}`);
         this.render({ row: toR, col: toC });
         this.updateTurnDisplay();
         this.checkGameState();
 
         if (!this.gameOver && this.turn === this.aiColor) {
-            console.log('[executeMove] AI sırası, scheduleAIMove çağrılıyor.');
             this.scheduleAIMove();
         }
     }
@@ -715,7 +764,7 @@ class ChessGame {
         try {
             const sound = type === 'move' ? this.moveSound : this.captureSound;
             sound.currentTime = 0;
-            sound.play().catch(e => console.warn('Ses çalınamadı:', e));
+            sound.play().catch(e => {});
         } catch (e) {}
     }
 
@@ -760,7 +809,7 @@ class ChessGame {
         }
     }
 
-    // ---------- OYUN DURUMU ----------
+    // ---------- OYUN DURUMU ve İSTATİSTİKLER ----------
     checkGameState() {
         const color = this.turn;
         const inCheck = this.isKingInCheck(color);
@@ -787,7 +836,22 @@ class ChessGame {
                 this.winner = null;
             }
             this.showGameOver();
+            this.updateStatistics();
         }
+    }
+
+    updateStatistics() {
+        if (!this.gameOver) return;
+        const playerColor = this.aiColor === 'W' ? 'B' : 'W';
+        if (this.winner === null) {
+            this.stats.draws++;
+        } else if (this.winner === playerColor) {
+            this.stats.wins++;
+        } else {
+            this.stats.losses++;
+        }
+        this.saveStats();
+        this.updateStatsDisplay();
     }
 
     showGameOver() {
@@ -824,10 +888,7 @@ class ChessGame {
     handleCellClick(row, col) {
         if (this.gameOver) return;
         if (this.promotionPending) return;
-        if (this.turn === this.aiColor) {
-            console.log('[AI] Sıra AI\'de, tıklama engellendi.');
-            return;
-        }
+        if (this.turn === this.aiColor) return;
 
         const piece = this.getPiece(row, col);
         const color = piece ? piece[0] : null;
@@ -922,12 +983,11 @@ class ChessGame {
         this.dragSource = null;
     }
 
-    // ---------- YAPAY ZEKA (RASTGELE) ----------
+    // ---------- YAPAY ZEKA (MİNİMAX DÜZELTİLDİ, RASTGELE YEDEK) ----------
     scheduleAIMove() {
         if (this.gameOver) return;
         if (this.turn !== this.aiColor) return;
         if (this.promotionPending) return;
-        console.log(`[scheduleAIMove] ${this.aiColor} için 800ms sonra hamle planlandı.`);
         setTimeout(() => {
             if (this.gameOver) return;
             if (this.turn !== this.aiColor) return;
@@ -937,24 +997,27 @@ class ChessGame {
     }
 
     doAIMove() {
-        console.log(`[doAIMove] AI hamle yapıyor. Renk: ${this.aiColor}, Derinlik: ${this.depth}`);
         if (this.gameOver) return;
         if (this.turn !== this.aiColor) return;
         if (this.promotionPending) return;
 
-        const allMoves = this.getAllLegalMoves(this.aiColor);
-        console.log(`[doAIMove] Tüm hamleler: ${allMoves.length}`);
-        if (allMoves.length === 0) {
-            console.log('[doAIMove] Hiç hamle yok, oyun bitti mi?');
-            return;
-        }
-
         const bestMove = this.getBestMove(this.aiColor, this.depth);
         if (!bestMove) {
-            console.log('[doAIMove] En iyi hamle bulunamadı!');
+            console.log('AI hamle bulamadı!');
+            // Rastgele hamle dene (yedek)
+            const allMoves = this.getAllLegalMoves(this.aiColor);
+            if (allMoves.length === 0) {
+                console.log('Hiç hamle yok, oyun bitti mi?');
+                return;
+            }
+            const randomMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+            const { fromRow, fromCol, toRow, toCol, moveData } = randomMove;
+            this.executeMove(fromRow, fromCol, toRow, toCol, moveData);
+            if (!this.gameOver && this.turn === this.aiColor) {
+                this.scheduleAIMove();
+            }
             return;
         }
-        console.log(`[doAIMove] Seçilen hamle: ${bestMove.fromRow},${bestMove.fromCol} → ${bestMove.toRow},${bestMove.toCol}`);
         const { fromRow, fromCol, toRow, toCol, moveData } = bestMove;
         this.executeMove(fromRow, fromCol, toRow, toCol, moveData);
         if (!this.gameOver && this.turn === this.aiColor) {
@@ -962,17 +1025,122 @@ class ChessGame {
         }
     }
 
-    // ⭐ YENİ: SADECE RASTGELE HAMLE SEÇ (MİNİMAX DEVRE DIŞI)
     getBestMove(color, depth) {
-        console.log(`[getBestMove] ${color} için rastgele hamle seçiliyor...`);
         const legalMoves = this.getAllLegalMoves(color);
-        if (legalMoves.length === 0) {
-            console.log(`[getBestMove] ${color} için hiç hamle yok!`);
-            return null;
+        if (legalMoves.length === 0) return null;
+
+        let bestMove = null;
+        let bestScore = -Infinity;
+        const isMaximizing = color === 'W';
+
+        for (const move of legalMoves) {
+            const { board: newBoard } = this.simulateMove(move.fromRow, move.fromCol, move.toRow, move.toCol, move.moveData);
+            const score = this.minimax(
+                newBoard,
+                depth - 1,
+                -Infinity,
+                Infinity,
+                !isMaximizing,
+                color === 'W' ? 'B' : 'W'
+            );
+            if ((isMaximizing && score > bestScore) || (!isMaximizing && score < bestScore)) {
+                bestScore = score;
+                bestMove = move;
+            }
         }
-        // Rastgele bir hamle döndür
-        const randomIndex = Math.floor(Math.random() * legalMoves.length);
-        return legalMoves[randomIndex];
+
+        // Eğer hiç iyi hamle bulunamazsa rastgele seç
+        if (!bestMove && legalMoves.length > 0) {
+            console.warn('[getBestMove] Hiç iyi hamle bulunamadı, rastgele seçiliyor.');
+            bestMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        }
+        return bestMove;
+    }
+
+    minimax(board, depth, alpha, beta, isMaximizing, currentColor) {
+        if (depth === 0) {
+            return this.evaluateBoard(board);
+        }
+
+        const moves = this.getAllLegalMovesForBoard(board, currentColor);
+        if (moves.length === 0) {
+            const king = this.findKingForBoard(board, currentColor);
+            if (!king) {
+                return isMaximizing ? -10000 : 10000;
+            }
+            return 0;
+        }
+
+        if (isMaximizing) {
+            let maxEval = -Infinity;
+            for (const move of moves) {
+                const newBoard = this.simulateMoveOnBoard(board, move.fromRow, move.fromCol, move.toRow, move.toCol, move.moveData);
+                const eval_ = this.minimax(newBoard, depth - 1, alpha, beta, false, currentColor === 'W' ? 'B' : 'W');
+                maxEval = Math.max(maxEval, eval_);
+                alpha = Math.max(alpha, eval_);
+                if (beta <= alpha) break;
+            }
+            return maxEval;
+        } else {
+            let minEval = Infinity;
+            for (const move of moves) {
+                const newBoard = this.simulateMoveOnBoard(board, move.fromRow, move.fromCol, move.toRow, move.toCol, move.moveData);
+                const eval_ = this.minimax(newBoard, depth - 1, alpha, beta, true, currentColor === 'W' ? 'B' : 'W');
+                minEval = Math.min(minEval, eval_);
+                beta = Math.min(beta, eval_);
+                if (beta <= alpha) break;
+            }
+            return minEval;
+        }
+    }
+
+    evaluateBoard(board) {
+        let score = 0;
+        const pieceValues = {
+            'pawn': 100,
+            'knight': 320,
+            'bishop': 330,
+            'rook': 500,
+            'queen': 900,
+            'king': 20000
+        };
+        const pawnTable = [
+            [0,  0,  0,  0,  0,  0,  0,  0],
+            [50, 50, 50, 50, 50, 50, 50, 50],
+            [10, 10, 20, 30, 30, 20, 10, 10],
+            [5,  5, 10, 25, 25, 10,  5,  5],
+            [0,  0,  0, 20, 20,  0,  0,  0],
+            [5, -5,-10,  0,  0,-10, -5,  5],
+            [5, 10, 10,-20,-20, 10, 10,  5],
+            [0,  0,  0,  0,  0,  0,  0,  0]
+        ];
+        const knightTable = [
+            [-50,-40,-30,-30,-30,-30,-40,-50],
+            [-40,-20,  0,  0,  0,  0,-20,-40],
+            [-30,  0, 10, 15, 15, 10,  0,-30],
+            [-30,  5, 15, 20, 20, 15,  5,-30],
+            [-30,  0, 15, 20, 20, 15,  0,-30],
+            [-30,  5, 10, 15, 15, 10,  5,-30],
+            [-40,-20,  0,  5,  5,  0,-20,-40],
+            [-50,-40,-30,-30,-30,-30,-40,-50]
+        ];
+
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                const piece = board[r][c];
+                if (!piece) continue;
+                const color = piece[0];
+                const type = piece.slice(1);
+                const value = pieceValues[type] || 0;
+                let posScore = 0;
+                const rowIndex = color === 'W' ? r : 7 - r;
+                const colIndex = c;
+                if (type === 'pawn') posScore = pawnTable[rowIndex][colIndex];
+                else if (type === 'knight') posScore = knightTable[rowIndex][colIndex];
+                score += (color === 'W' ? 1 : -1) * (value + posScore);
+            }
+        }
+        return score;
     }
 
     // ---------- YARDIMCI FONKSİYONLAR (AI İÇİN) ----------
@@ -1053,7 +1221,6 @@ class ChessGame {
     }
 
     getAllLegalMoves(color) {
-        console.log(`[getAllLegalMoves] ${color} için hamle aranıyor...`);
         const moves = [];
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
@@ -1072,7 +1239,6 @@ class ChessGame {
                 }
             }
         }
-        console.log(`[getAllLegalMoves] ${color} için ${moves.length} hamle bulundu.`);
         return moves;
     }
 }
