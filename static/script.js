@@ -1,5 +1,5 @@
 // ============================================================
-//  SATRANÇ OYUNU – FULL LOG + AI (HER RENK İÇİN)
+//  SATRANÇ OYUNU – RASTGELE AI (MİNİMAX GEÇİCİ DEVRE DIŞI)
 // ============================================================
 
 class ChessGame {
@@ -23,7 +23,7 @@ class ChessGame {
         this.stateHistory = [];
         this.dragSource = null;
 
-        // Sesler
+        // Ses dosyaları (bulunamazsa hata verir, ama oyun devam eder)
         this.moveSound = new Audio('/static/sounds/move.wav');
         this.captureSound = new Audio('/static/sounds/capture.wav');
 
@@ -34,14 +34,12 @@ class ChessGame {
         this.gameOverModal = document.getElementById('game-over-modal');
         this.gameOverMessage = document.getElementById('game-over-message');
 
-        // Butonlar
         document.getElementById('reset-btn').addEventListener('click', () => this.reset());
         document.getElementById('new-game-btn').addEventListener('click', () => this.reset());
         document.getElementById('undo-btn').addEventListener('click', () => this.undoMove());
         document.getElementById('save-btn').addEventListener('click', () => this.saveGame());
         document.getElementById('load-btn').addEventListener('click', () => this.loadGame());
 
-        // Renk seçimi
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -51,8 +49,6 @@ class ChessGame {
                 this.reset();
             });
         });
-
-        // Zorluk seçimi
         document.querySelectorAll('.depth-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.depth-btn').forEach(b => b.classList.remove('active'));
@@ -62,11 +58,9 @@ class ChessGame {
                 this.reset();
             });
         });
-
         document.querySelector('.color-btn[data-color="W"]')?.classList.add('active');
         document.querySelector('.depth-btn[data-depth="2"]')?.classList.add('active');
 
-        // Terfi
         document.querySelectorAll('#promotion-choices button').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const piece = e.target.dataset.piece;
@@ -74,7 +68,6 @@ class ChessGame {
             });
         });
 
-        // Sürükleme
         this.boardEl.addEventListener('dragstart', (e) => this.onDragStart(e));
         this.boardEl.addEventListener('dragover', (e) => this.onDragOver(e));
         this.boardEl.addEventListener('drop', (e) => this.onDrop(e));
@@ -83,7 +76,7 @@ class ChessGame {
         this.reset();
     }
 
-    // ---------- STATE KAYDET ----------
+    // ---------- STATE KAYDETME ----------
     saveState() {
         this.stateHistory.push({
             board: this.board.map(row => [...row]),
@@ -248,7 +241,7 @@ class ChessGame {
         }
     }
 
-    // ---------- RENDER ----------
+    // ---------- RENDER (SADE ANİMASYON) ----------
     render(animateTo = null) {
         this.boardEl.innerHTML = '';
         for (let r = 0; r < 8; r++) {
@@ -346,7 +339,7 @@ class ChessGame {
         }
     }
 
-    // ---------- HAMLE ÜRETME ----------
+    // ---------- HAMLE ÜRETME (TEMEL) ----------
     getRawMoves(row, col, checkKingSafety = true) {
         const piece = this.getPiece(row, col);
         if (!piece) return [];
@@ -832,7 +825,7 @@ class ChessGame {
         if (this.gameOver) return;
         if (this.promotionPending) return;
         if (this.turn === this.aiColor) {
-            console.log('[handleCellClick] Sıra AI\'de, tıklama engellendi.');
+            console.log('[AI] Sıra AI\'de, tıklama engellendi.');
             return;
         }
 
@@ -929,7 +922,7 @@ class ChessGame {
         this.dragSource = null;
     }
 
-    // ---------- YAPAY ZEKA ----------
+    // ---------- YAPAY ZEKA (RASTGELE) ----------
     scheduleAIMove() {
         if (this.gameOver) return;
         if (this.turn !== this.aiColor) return;
@@ -956,17 +949,11 @@ class ChessGame {
             return;
         }
 
-       getBestMove(color, depth) {
-    console.log(`[getBestMove] ${color} için rastgele hamle seçiliyor...`);
-    const legalMoves = this.getAllLegalMoves(color);
-    if (legalMoves.length === 0) {
-        console.log(`[getBestMove] ${color} için hiç hamle yok!`);
-        return null;
-    }
-    // Rastgele bir hamle döndür
-    const randomIndex = Math.floor(Math.random() * legalMoves.length);
-    return legalMoves[randomIndex];
-}
+        const bestMove = this.getBestMove(this.aiColor, this.depth);
+        if (!bestMove) {
+            console.log('[doAIMove] En iyi hamle bulunamadı!');
+            return;
+        }
         console.log(`[doAIMove] Seçilen hamle: ${bestMove.fromRow},${bestMove.fromCol} → ${bestMove.toRow},${bestMove.toCol}`);
         const { fromRow, fromCol, toRow, toCol, moveData } = bestMove;
         this.executeMove(fromRow, fromCol, toRow, toCol, moveData);
@@ -975,122 +962,17 @@ class ChessGame {
         }
     }
 
+    // ⭐ YENİ: SADECE RASTGELE HAMLE SEÇ (MİNİMAX DEVRE DIŞI)
     getBestMove(color, depth) {
-        console.log(`[getBestMove] ${color} için derinlik ${depth} ile başlıyor.`);
+        console.log(`[getBestMove] ${color} için rastgele hamle seçiliyor...`);
         const legalMoves = this.getAllLegalMoves(color);
         if (legalMoves.length === 0) {
             console.log(`[getBestMove] ${color} için hiç hamle yok!`);
             return null;
         }
-
-        console.log(`[getBestMove] ${legalMoves.length} adet geçerli hamle arasından seçim yapılıyor.`);
-        let bestMove = null;
-        let bestScore = -Infinity;
-        const isMaximizing = color === 'W';
-
-        for (const move of legalMoves) {
-            const { board: newBoard } = this.simulateMove(move.fromRow, move.fromCol, move.toRow, move.toCol, move.moveData);
-            const score = this.minimax(
-                newBoard,
-                depth - 1,
-                -Infinity,
-                Infinity,
-                !isMaximizing,
-                color === 'W' ? 'B' : 'W'
-            );
-            if ((isMaximizing && score > bestScore) || (!isMaximizing && score < bestScore)) {
-                bestScore = score;
-                bestMove = move;
-            }
-        }
-        console.log(`[getBestMove] En iyi skor: ${bestScore}`);
-        return bestMove;
-    }
-
-    minimax(board, depth, alpha, beta, isMaximizing, currentColor) {
-        if (depth === 0) {
-            return this.evaluateBoard(board);
-        }
-
-        const moves = this.getAllLegalMovesForBoard(board, currentColor);
-        if (moves.length === 0) {
-            const king = this.findKingForBoard(board, currentColor);
-            if (!king) {
-                return isMaximizing ? -10000 : 10000;
-            }
-            return 0;
-        }
-
-        if (isMaximizing) {
-            let maxEval = -Infinity;
-            for (const move of moves) {
-                const newBoard = this.simulateMoveOnBoard(board, move.fromRow, move.fromCol, move.toRow, move.toCol, move.moveData);
-                const eval_ = this.minimax(newBoard, depth - 1, alpha, beta, false, currentColor === 'W' ? 'B' : 'W');
-                maxEval = Math.max(maxEval, eval_);
-                alpha = Math.max(alpha, eval_);
-                if (beta <= alpha) break;
-            }
-            return maxEval;
-        } else {
-            let minEval = Infinity;
-            for (const move of moves) {
-                const newBoard = this.simulateMoveOnBoard(board, move.fromRow, move.fromCol, move.toRow, move.toCol, move.moveData);
-                const eval_ = this.minimax(newBoard, depth - 1, alpha, beta, true, currentColor === 'W' ? 'B' : 'W');
-                minEval = Math.min(minEval, eval_);
-                beta = Math.min(beta, eval_);
-                if (beta <= alpha) break;
-            }
-            return minEval;
-        }
-    }
-
-    evaluateBoard(board) {
-        let score = 0;
-        const pieceValues = {
-            'pawn': 100,
-            'knight': 320,
-            'bishop': 330,
-            'rook': 500,
-            'queen': 900,
-            'king': 20000
-        };
-        const pawnTable = [
-            [0,  0,  0,  0,  0,  0,  0,  0],
-            [50, 50, 50, 50, 50, 50, 50, 50],
-            [10, 10, 20, 30, 30, 20, 10, 10],
-            [5,  5, 10, 25, 25, 10,  5,  5],
-            [0,  0,  0, 20, 20,  0,  0,  0],
-            [5, -5,-10,  0,  0,-10, -5,  5],
-            [5, 10, 10,-20,-20, 10, 10,  5],
-            [0,  0,  0,  0,  0,  0,  0,  0]
-        ];
-        const knightTable = [
-            [-50,-40,-30,-30,-30,-30,-40,-50],
-            [-40,-20,  0,  0,  0,  0,-20,-40],
-            [-30,  0, 10, 15, 15, 10,  0,-30],
-            [-30,  5, 15, 20, 20, 15,  5,-30],
-            [-30,  0, 15, 20, 20, 15,  0,-30],
-            [-30,  5, 10, 15, 15, 10,  5,-30],
-            [-40,-20,  0,  5,  5,  0,-20,-40],
-            [-50,-40,-30,-30,-30,-30,-40,-50]
-        ];
-
-        for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
-                const piece = board[r][c];
-                if (!piece) continue;
-                const color = piece[0];
-                const type = piece.slice(1);
-                const value = pieceValues[type] || 0;
-                let posScore = 0;
-                const rowIndex = color === 'W' ? r : 7 - r;
-                const colIndex = c;
-                if (type === 'pawn') posScore = pawnTable[rowIndex][colIndex];
-                else if (type === 'knight') posScore = knightTable[rowIndex][colIndex];
-                score += (color === 'W' ? 1 : -1) * (value + posScore);
-            }
-        }
-        return score;
+        // Rastgele bir hamle döndür
+        const randomIndex = Math.floor(Math.random() * legalMoves.length);
+        return legalMoves[randomIndex];
     }
 
     // ---------- YARDIMCI FONKSİYONLAR (AI İÇİN) ----------
