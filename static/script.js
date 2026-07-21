@@ -956,14 +956,17 @@ class ChessGame {
             return;
         }
 
-        const bestMove = this.getBestMove(this.aiColor, this.depth);
-        if (!bestMove) {
-            console.log('[doAIMove] En iyi hamle bulunamadı! Rastgele seçiliyor.');
-            const randomMove = allMoves[Math.floor(Math.random() * allMoves.length)];
-            const { fromRow, fromCol, toRow, toCol, moveData } = randomMove;
-            this.executeMove(fromRow, fromCol, toRow, toCol, moveData);
-            return;
-        }
+       getBestMove(color, depth) {
+    console.log(`[getBestMove] ${color} için rastgele hamle seçiliyor...`);
+    const legalMoves = this.getAllLegalMoves(color);
+    if (legalMoves.length === 0) {
+        console.log(`[getBestMove] ${color} için hiç hamle yok!`);
+        return null;
+    }
+    // Rastgele bir hamle döndür
+    const randomIndex = Math.floor(Math.random() * legalMoves.length);
+    return legalMoves[randomIndex];
+}
         console.log(`[doAIMove] Seçilen hamle: ${bestMove.fromRow},${bestMove.fromCol} → ${bestMove.toRow},${bestMove.toCol}`);
         const { fromRow, fromCol, toRow, toCol, moveData } = bestMove;
         this.executeMove(fromRow, fromCol, toRow, toCol, moveData);
